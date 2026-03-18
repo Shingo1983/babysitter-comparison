@@ -78,6 +78,24 @@
   .badge-weekend { background: #fff3e0; color: #e65100; }
   .badge-holiday { background: #fce4ec; color: #c62828; }
 
+  /* Date input with day-of-week overlay */
+  .date-wrap {
+    position: relative;
+  }
+  .date-wrap input[type="date"] {
+    width: 100%; padding: 9px 10px; border: 2px solid #e0e0e0; border-radius: 10px;
+    font-size: 16px; background: white; color: transparent;
+    -webkit-appearance: none; appearance: none;
+  }
+  .date-wrap input[type="date"]::-webkit-date-and-time-value { color: transparent; }
+  .date-wrap input[type="date"]:focus { outline: none; border-color: var(--pink-dark); }
+  .date-wrap .date-overlay {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: flex; align-items: center; padding: 0 10px;
+    font-size: 16px; color: var(--text); pointer-events: none;
+    font-weight: 400;
+  }
+
   .btn {
     display: block; width: 100%; padding: 13px; color: white; border: none;
     border-radius: 12px; font-size: 1em; font-weight: 600; cursor: pointer;
@@ -212,8 +230,10 @@
       <div class="form-row">
         <div class="form-group">
           <label>利用日 <span id="dayTypeBadge"></span></label>
-          <input type="text" id="dateDisplayInput" readonly style="cursor:pointer;" onclick="document.getElementById('dateInput').showPicker()">
-          <input type="date" id="dateInput" style="position:absolute; visibility:hidden; pointer-events:none;">
+          <div class="date-wrap">
+            <input type="date" id="dateInput">
+            <div class="date-overlay" id="dateDisplayInput"></div>
+          </div>
         </div>
         <div class="form-group" style="max-width:90px;">
           <label>人数</label>
@@ -447,11 +467,11 @@ function updateDuration() {
 function updateDayBadge() {
   const ds=document.getElementById('dateInput').value;
   const badge=document.getElementById('dayTypeBadge'), disp=document.getElementById('dateDisplayInput');
-  if(!ds){badge.innerHTML='';disp.value='';return;}
+  if(!ds){badge.innerHTML='';disp.textContent='';return;}
   const t=getDayType(ds);
   const lb={weekday:['平日','badge-weekday'],weekend:['土日','badge-weekend'],holiday:['祝日','badge-holiday']}[t];
   badge.innerHTML=`<span class="day-type-badge ${lb[1]}">${lb[0]}</span>`;
-  disp.value=fmtDateDow(ds);
+  disp.textContent=fmtDateDow(ds);
 }
 
 function calculate() {
@@ -502,8 +522,10 @@ function addEntry() {
     <div class="form-row" style="margin-bottom:6px;">
       <div class="form-group" style="flex:2;">
         <label>日付</label>
-        <input type="text" class="entry-date-display" readonly style="cursor:pointer;" onclick="this.nextElementSibling.showPicker()">
-        <input type="date" class="entry-date" value="${defDate}" style="position:absolute; visibility:hidden; pointer-events:none;">
+        <div class="date-wrap">
+          <input type="date" class="entry-date" value="${defDate}">
+          <div class="date-overlay entry-date-display"></div>
+        </div>
       </div>
       <div class="form-group" style="max-width:80px;">
         <label>人数</label>
@@ -534,8 +556,8 @@ function addEntry() {
   // Setup date display sync
   const dateHidden=div.querySelector('.entry-date');
   const dateDisp=div.querySelector('.entry-date-display');
-  dateHidden.addEventListener('change', function(){ dateDisp.value=this.value?fmtDateDow(this.value):''; });
-  if(defDate) dateDisp.value=fmtDateDow(defDate);
+  dateHidden.addEventListener('change', function(){ dateDisp.textContent=this.value?fmtDateDow(this.value):''; });
+  if(defDate) dateDisp.textContent=fmtDateDow(defDate);
 
   updateEntryCount();
   div.scrollIntoView({behavior:'smooth',block:'center'});
