@@ -319,11 +319,11 @@
     <div class="rate-tables" id="rateTables">
       <table>
         <caption>① 五十嵐さん</caption>
-        <tr><th>時間帯</th><th>料金/h</th></tr>
-        <tr><td>9:00〜18:00</td><td>¥3,500</td></tr>
-        <tr><td>18:00〜22:00</td><td>¥3,850</td></tr>
-        <tr><td>22:00〜</td><td>¥4,375</td></tr>
-        <tr><td colspan="2" style="color:#c62828; font-size:0.9em;">土日祝+¥3,000/日 ｜ 交通費¥1,200 ｜ 最低2h</td></tr>
+        <tr><th>時間帯</th><th>1名</th><th>2名</th></tr>
+        <tr><td>9:00〜18:00</td><td>¥2,500</td><td>¥3,500</td></tr>
+        <tr><td>18:00〜22:00</td><td>¥2,750</td><td>¥3,850</td></tr>
+        <tr><td>22:00〜9:00</td><td>¥3,125</td><td>¥4,375</td></tr>
+        <tr><td colspan="3" style="color:#c62828; font-size:0.9em;">土日祝+¥3,000/日 ｜ 年末年始(12/24〜1/5)祝日扱い ｜ 病児+¥1,000/h ｜ 交通費¥1,200 ｜ 最低2h</td></tr>
       </table>
       <table>
         <caption>② すずさん（SNS割引後）</caption>
@@ -402,23 +402,29 @@ function toggleRateTables() { document.getElementById('rateTables').classList.to
 // ============================
 // Calculation Engines
 // ============================
-function igRate(m) { const h=m/60; if(h>=9&&h<18)return 3500; if(h>=18&&h<22)return 3850; return 4375; }
+function isNenmatsuNenshi(ds) { const d=new Date(ds+'T00:00:00'),m=d.getMonth()+1,day=d.getDate(); return (m===12&&day>=24)||(m===1&&day<=5); }
+function igRate(m, cc) {
+  const h=m/60;
+  if(cc===1){ if(h>=9&&h<18)return 2500; if(h>=18&&h<22)return 2750; return 3125; }
+  if(h>=9&&h<18)return 3500; if(h>=18&&h<22)return 3850; return 4375;
+}
 
-function calcIg(s, e, hol, sick) {
+function calcIg(s, e, hol, sick, cc) {
+  if(cc>=3) return { total: null, details: ['3名以上は要相談'], unavailable: true };
   const tot=e-s;
   const minReq=120; // 2h
   const isUnder = tot < minReq;
   const calcEnd = isUnder ? s + minReq : e;
   const calcTot = calcEnd - s;
   let cost=0, bk={};
-  for(let m=s;m<calcEnd;m+=15){ const r=igRate(m%1440); cost+=r/4; const k='¥'+r.toLocaleString(); bk[k]=(bk[k]||0)+15; }
+  for(let m=s;m<calcEnd;m+=15){ const r=igRate(m%1440, cc); cost+=r/4; const k='¥'+r.toLocaleString(); bk[k]=(bk[k]||0)+15; }
   let det=[];
   if(isUnder) det.push('⚠ 最低2h分で計算');
   for(const[r,mins]of Object.entries(bk)){ const h=Math.floor(mins/60),m=mins%60; det.push(`${r}/h × ${h>0?h+'時間':''}${m>0?m+'分':''}`); }
   let sf=0;
   if(sick){ sf=1000*(calcTot/60); det.push(`病児保育: +¥${sf.toLocaleString()}`); }
   let wf=0;
-  if(hol){ wf=3000; det.push('土日祝: +¥3,000'); }
+  if(hol){ wf=3000; det.push('土日祝・年末年始: +¥3,000'); }
   det.push('交通費: ¥1,200');
   return { total: cost+wf+1200+sf, details: det, isMinApplied: isUnder };
 }
@@ -481,21 +487,30 @@ function calculate() {
   if(!ds){showSErr('利用日を選択してください。');return;}
   if(e<=s){showSErr('終了時間は開始時間より後にしてください。');return;}
   document.getElementById('errorMsg').classList.remove('show');
-  const hol=getDayType(ds)!=='weekday', tot=e-s;
-  const ig=calcIg(s,e,hol,sick), sz=calcSz(s,e,hol,cc);
+  const hol=getDayType(ds)!=='weekday', holIg=hol||isNenmatsuNenshi(ds), tot=e-s;
+  const ig=calcIg(s,e,holIg,sick,cc), sz=calcSz(s,e,hol,cc);
   const sn=sick?'<br><span style="color:#c62828;">※ 病児保育は対応不可</span>':'';
   const res=document.getElementById('results'); res.classList.add('show');
   const c1=document.getElementById('resultCard1'),c2=document.getElementById('resultCard2');
   c1.classList.remove('winner');c2.classList.remove('winner');
-  document.getElementById('price1').textContent='¥'+Math.round(ig.total).toLocaleString();
-  document.getElementById('breakdown1').innerHTML=ig.details.join('<br>');
+  if(ig.unavailable) {
+    document.getElementById('price1').textContent='---';
+    document.getElementById('breakdown1').innerHTML=ig.details.join('<br>');
+  } else {
+    document.getElementById('price1').textContent='¥'+Math.round(ig.total).toLocaleString();
+    document.getElementById('breakdown1').innerHTML=ig.details.join('<br>');
+  }
   document.getElementById('price2').textContent='¥'+Math.round(sz.total).toLocaleString();
   document.getElementById('breakdown2').innerHTML=sz.details.join('<br>')+sn;
   const sav=document.getElementById('savingMsg');
-  const df=Math.abs(Math.round(ig.total)-Math.round(sz.total));
-  if(ig.total<sz.total){c1.classList.add('winner');sav.innerHTML=`<div class="saving-msg">① 五十嵐さんが ¥${df.toLocaleString()} おトク！</div>`;}
-  else if(sz.total<ig.total){c2.classList.add('winner');sav.innerHTML=`<div class="saving-msg">② すずさんが ¥${df.toLocaleString()} おトク！</div>`;}
-  else sav.innerHTML=`<div class="same-msg">両者同額</div>`;
+  if(ig.unavailable){
+    c2.classList.add('winner');sav.innerHTML=`<div class="saving-msg">② すずさんのみ対応可</div>`;
+  } else {
+    const df=Math.abs(Math.round(ig.total)-Math.round(sz.total));
+    if(ig.total<sz.total){c1.classList.add('winner');sav.innerHTML=`<div class="saving-msg">① 五十嵐さんが ¥${df.toLocaleString()} おトク！</div>`;}
+    else if(sz.total<ig.total){c2.classList.add('winner');sav.innerHTML=`<div class="saving-msg">② すずさんが ¥${df.toLocaleString()} おトク！</div>`;}
+    else sav.innerHTML=`<div class="same-msg">両者同額</div>`;
+  }
   res.scrollIntoView({behavior:'smooth',block:'start'});
 }
 function showSErr(msg){const el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('show');document.getElementById('results').classList.remove('show');}
@@ -582,10 +597,12 @@ function calcMulti() {
     const cc=parseInt(en.querySelector('.entry-children').value);
     if(!ds||e<=s) return;
     const hol=getDayType(ds)!=='weekday';
-    const ig=calcIg(s,e,hol,false);
+    const holIg=hol||isNenmatsuNenshi(ds);
+    const ig=calcIg(s,e,holIg,false,cc);
     const sz=calcSz(s,e,hol,cc);
     let winner='same';
-    if(ig.total<sz.total) winner='ig';
+    if(ig.unavailable) winner='sz';
+    else if(ig.total<sz.total) winner='ig';
     else if(sz.total<ig.total) winner='sz';
     rows.push({ds,s,e,cc,ig,sz,winner});
   });
@@ -597,16 +614,22 @@ function calcMulti() {
   let igTotal=0, szTotal=0;
   let html='<tr><th>日付</th><th>時間</th><th>①五十嵐</th><th>②すず</th></tr>';
   rows.forEach(r=>{
-    const igP=Math.round(r.ig.total), szP=Math.round(r.sz.total);
-    igTotal+=igP; szTotal+=szP;
-    const igWin = r.winner==='ig'||r.winner==='same';
+    const szP=Math.round(r.sz.total); szTotal+=szP;
     const szWin = r.winner==='sz'||r.winner==='same';
-    const igNote = r.ig.isMinApplied ? '<br><span style="font-size:0.7em;color:#e65100;">※最低2h</span>' : '';
     const szNote = r.sz.isMinApplied ? '<br><span style="font-size:0.7em;color:#e65100;">※最低3h</span>' : '';
+    let igCell;
+    if(r.ig.unavailable) {
+      igCell='<td class="unavail">要相談</td>';
+    } else {
+      const igP=Math.round(r.ig.total); igTotal+=igP;
+      const igWin = r.winner==='ig'||r.winner==='same';
+      const igNote = r.ig.isMinApplied ? '<br><span style="font-size:0.7em;color:#e65100;">※最低2h</span>' : '';
+      igCell=`<td class="${igWin?'cheaper':''}">¥${igP.toLocaleString()}${igNote}</td>`;
+    }
     html+=`<tr>
       <td class="date-col">${fmtShort(r.ds)}</td>
       <td>${minToTime(r.s)}~${minToTime(r.e)}</td>
-      <td class="${igWin?'cheaper':''}">¥${igP.toLocaleString()}${igNote}</td>
+      ${igCell}
       <td class="${szWin?'cheaper':''}">¥${szP.toLocaleString()}${szNote}</td>
     </tr>`;
   });
