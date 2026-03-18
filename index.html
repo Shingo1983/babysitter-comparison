@@ -1,0 +1,671 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>ベビーシッター料金比較</title>
+<style>
+  :root {
+    --pink: #f8e8e8;
+    --pink-dark: #e8b4b8;
+    --blue: #e8eef8;
+    --blue-dark: #7a9cc6;
+    --green: #e8f5e9;
+    --green-dark: #66bb6a;
+    --gray: #f5f5f5;
+    --text: #333;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Hiragino Sans', 'Meiryo', sans-serif;
+    background: linear-gradient(135deg, #fce4ec 0%, #e3f2fd 100%);
+    min-height: 100vh;
+    padding: 12px;
+    color: var(--text);
+    -webkit-text-size-adjust: 100%;
+  }
+  .container { max-width: 600px; margin: 0 auto; }
+  h1 { text-align: center; font-size: 1.3em; margin-bottom: 6px; color: #5d4037; }
+
+  /* Tabs */
+  .tabs {
+    display: flex; gap: 4px; margin-bottom: 12px;
+    background: white; border-radius: 12px; padding: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+  }
+  .tab-btn {
+    flex: 1; padding: 10px 6px; border: none; border-radius: 10px;
+    font-size: 0.85em; font-weight: 600; cursor: pointer;
+    background: transparent; color: #999; transition: all 0.2s;
+  }
+  .tab-btn.active { background: linear-gradient(135deg, var(--pink-dark), var(--blue-dark)); color: white; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Cards */
+  .card {
+    background: white; border-radius: 14px; padding: 16px;
+    margin-bottom: 12px; box-shadow: 0 2px 10px rgba(0,0,0,0.07);
+  }
+  .card h2 {
+    font-size: 1em; margin-bottom: 12px; padding-bottom: 6px;
+    border-bottom: 2px solid var(--pink-dark); color: #5d4037;
+  }
+
+  /* Forms */
+  .form-row {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; align-items: end;
+  }
+  .form-group { flex: 1; min-width: 80px; }
+  .form-group label {
+    display: block; font-size: 0.8em; font-weight: 600; margin-bottom: 4px; color: #666;
+  }
+  .form-group input, .form-group select {
+    width: 100%; padding: 9px 10px; border: 2px solid #e0e0e0; border-radius: 10px;
+    font-size: 16px; background: white; transition: border-color 0.2s;
+    -webkit-appearance: none; appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23999' d='M6 8L1 3h10z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+  }
+  .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--pink-dark); }
+  .day-type-badge {
+    display: inline-block; padding: 2px 8px; border-radius: 12px;
+    font-size: 0.75em; font-weight: 600; margin-left: 6px; vertical-align: middle;
+  }
+  .badge-weekday { background: var(--blue); color: var(--blue-dark); }
+  .badge-weekend { background: #fff3e0; color: #e65100; }
+  .badge-holiday { background: #fce4ec; color: #c62828; }
+
+  .btn {
+    display: block; width: 100%; padding: 13px; color: white; border: none;
+    border-radius: 12px; font-size: 1em; font-weight: 600; cursor: pointer;
+    transition: transform 0.1s;
+  }
+  .btn:active { transform: scale(0.98); }
+  .btn-primary { background: linear-gradient(135deg, var(--pink-dark), var(--blue-dark)); }
+  .btn-add { background: white; color: var(--blue-dark); border: 2px dashed #ccc; font-size: 0.9em; padding: 11px; }
+
+  .note { font-size: 0.75em; color: #999; margin-top: 4px; line-height: 1.4; }
+
+  /* Single Day Results */
+  .results { display: none; }
+  .results.show { display: block; }
+  .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 12px; }
+  .result-card { border-radius: 12px; padding: 14px; position: relative; }
+  .result-card.winner { box-shadow: 0 3px 16px rgba(0,0,0,0.12); }
+  .result-card-1 { background: linear-gradient(135deg, #e3f2fd, #bbdefb); }
+  .result-card-2 { background: linear-gradient(135deg, #fce4ec, #f8bbd0); }
+  .result-card .name { font-size: 0.85em; font-weight: 700; }
+  .result-card .price { font-size: 1.6em; font-weight: 800; margin: 4px 0; }
+  .result-card .winner-badge {
+    display: none; position: absolute; top: -8px; right: 8px;
+    background: #ff6f00; color: white; padding: 2px 10px; border-radius: 12px;
+    font-size: 0.7em; font-weight: 700;
+  }
+  .result-card.winner .winner-badge { display: block; }
+  .result-card .breakdown { font-size: 0.75em; color: #555; margin-top: 6px; line-height: 1.6; }
+  .saving-msg {
+    text-align: center; font-size: 0.95em; font-weight: 600; padding: 12px;
+    border-radius: 10px; background: var(--green); color: #2e7d32;
+  }
+  .same-msg {
+    text-align: center; padding: 12px; border-radius: 10px; background: var(--gray);
+    color: #666; font-weight: 600;
+  }
+  .error-msg {
+    text-align: center; padding: 12px; border-radius: 10px; background: #fff3e0;
+    color: #e65100; font-weight: 600; margin-bottom: 12px; display: none;
+  }
+  .error-msg.show { display: block; }
+
+  /* Multi-day entries */
+  .entry-item {
+    background: #fafafa; border-radius: 10px; padding: 10px 12px;
+    margin-bottom: 8px; position: relative; border: 1px solid #eee;
+  }
+  .entry-item .entry-header {
+    display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;
+  }
+  .entry-item .entry-num { font-weight: 700; font-size: 0.8em; color: var(--blue-dark); }
+  .entry-item .btn-remove {
+    background: none; border: none; color: #e57373; font-size: 1.2em;
+    cursor: pointer; padding: 2px 6px; border-radius: 6px;
+  }
+  .entry-item .form-row { margin-bottom: 4px; }
+
+  /* Multi results table */
+  .multi-result-table {
+    width: 100%; border-collapse: collapse; font-size: 0.8em; margin-bottom: 12px;
+  }
+  .multi-result-table th {
+    background: #f0f0f0; padding: 8px 6px; text-align: center;
+    font-weight: 600; font-size: 0.85em;
+  }
+  .multi-result-table td { padding: 8px 6px; border-bottom: 1px solid #eee; text-align: center; }
+  .multi-result-table .cheaper { background: #e8f5e9; font-weight: 700; }
+  .multi-result-table .date-col { text-align: left; font-weight: 600; white-space: nowrap; }
+  .multi-result-table .total-row { background: #f5f5f5; font-weight: 800; }
+  .multi-result-table .total-row .cheaper { background: #c8e6c9; }
+  .multi-result-table .unavail { color: #bbb; font-size: 0.85em; }
+
+  /* Email output */
+  .email-block {
+    margin-bottom: 12px; border: 1px solid #e0e0e0; border-radius: 10px; overflow: hidden;
+  }
+  .email-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 12px; background: #f5f5f5; font-weight: 600; font-size: 0.85em;
+  }
+  .email-header .btn-copy {
+    background: var(--blue-dark); color: white; border: none; padding: 5px 14px;
+    border-radius: 8px; font-size: 0.85em; font-weight: 600; cursor: pointer;
+  }
+  .email-header .btn-copy:active { opacity: 0.7; }
+  .email-header .btn-copy.copied { background: var(--green-dark); }
+  .email-body {
+    padding: 12px; font-size: 0.85em; line-height: 1.8; white-space: pre-wrap;
+    font-family: inherit; background: white; user-select: all; -webkit-user-select: all;
+  }
+  .email-none {
+    padding: 14px; text-align: center; color: #999; font-size: 0.85em; background: #fafafa;
+    border-radius: 10px; margin-bottom: 12px;
+  }
+
+  /* Rate tables */
+  .rate-table-toggle { text-align: center; margin-top: 4px; }
+  .rate-table-toggle button {
+    background: none; border: 1px solid #ccc; border-radius: 8px;
+    padding: 6px 14px; font-size: 0.8em; color: #777; cursor: pointer;
+  }
+  .rate-tables { display: none; margin-top: 12px; }
+  .rate-tables.show { display: block; }
+  .rate-tables table { width: 100%; border-collapse: collapse; font-size: 0.78em; margin-bottom: 12px; }
+  .rate-tables th { background: #f0f0f0; padding: 6px 8px; text-align: left; font-weight: 600; }
+  .rate-tables td { padding: 5px 8px; border-bottom: 1px solid #eee; }
+  .rate-tables caption { text-align: left; font-weight: 700; font-size: 0.95em; margin-bottom: 4px; color: #5d4037; }
+
+  /* Toast */
+  .toast {
+    position: fixed; bottom: 30px; left: 50%; transform: translateX(-50%);
+    background: rgba(0,0,0,0.8); color: white; padding: 10px 24px;
+    border-radius: 20px; font-size: 0.85em; font-weight: 600;
+    opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
+  }
+  .toast.show { opacity: 1; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>ベビーシッター料金比較</h1>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('single')">単日比較</button>
+    <button class="tab-btn" onclick="switchTab('multi')">月間まとめ・依頼文</button>
+  </div>
+
+  <!-- ===== TAB 1: Single Day ===== -->
+  <div class="tab-content active" id="tab-single">
+    <div class="card">
+      <h2>利用条件を入力</h2>
+      <div class="form-row">
+        <div class="form-group">
+          <label>利用日 <span id="dayTypeBadge"></span></label>
+          <input type="text" id="dateDisplayInput" readonly style="cursor:pointer;" onclick="document.getElementById('dateInput').showPicker()">
+          <input type="date" id="dateInput" style="position:absolute; visibility:hidden; pointer-events:none;">
+        </div>
+        <div class="form-group" style="max-width:90px;">
+          <label>人数</label>
+          <select id="childCount">
+            <option value="1">1人</option>
+            <option value="2" selected>2人</option>
+            <option value="3">3人</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label>開始</label><select id="startTime"></select></div>
+        <div class="form-group"><label>終了</label><select id="endTime"></select></div>
+        <div class="form-group" style="max-width:80px;">
+          <label>時間</label>
+          <input type="text" id="durationDisplay" readonly style="background:#f9f9f9; text-align:center; font-weight:600;">
+        </div>
+      </div>
+      <div style="margin-bottom:10px;">
+        <label style="display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-size:0.85em;">
+          <input type="checkbox" id="sickChild" style="width:18px; height:18px; accent-color:var(--pink-dark);">
+          病児保育
+        </label>
+        <span class="note" style="display:block;">※ 五十嵐さんのみ対応可（+¥1,000/h）</span>
+      </div>
+      <p class="note">※ 15分単位。五十嵐さん最低2h、すずさん最低3h。</p>
+      <div style="height:8px;"></div>
+      <button class="btn btn-primary" onclick="calculate()">料金を比較する</button>
+    </div>
+    <div class="error-msg" id="errorMsg"></div>
+    <div class="results" id="results">
+      <div class="card">
+        <h2>比較結果</h2>
+        <div class="result-grid">
+          <div class="result-card result-card-1" id="resultCard1">
+            <div class="winner-badge">おすすめ</div>
+            <div class="name">① 五十嵐さん</div>
+            <div class="price" id="price1">-</div>
+            <div class="breakdown" id="breakdown1"></div>
+          </div>
+          <div class="result-card result-card-2" id="resultCard2">
+            <div class="winner-badge">おすすめ</div>
+            <div class="name">② すずさん</div>
+            <div class="price" id="price2">-</div>
+            <div class="breakdown" id="breakdown2"></div>
+          </div>
+        </div>
+        <div id="savingMsg"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== TAB 2: Multi Day ===== -->
+  <div class="tab-content" id="tab-multi">
+    <div class="card">
+      <h2>利用予定日 <span id="entryCount" style="font-size:0.8em; color:#999; font-weight:normal;"></span></h2>
+      <div id="entryList"></div>
+      <button class="btn btn-add" onclick="addEntry()">＋ 日程を追加</button>
+    </div>
+
+    <button class="btn btn-primary" onclick="calcMulti()" style="margin-bottom:12px;">まとめて比較 & メール文作成</button>
+
+    <div id="multiResults" style="display:none;">
+      <div class="card">
+        <h2>料金比較一覧</h2>
+        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+          <table class="multi-result-table" id="multiTable"></table>
+        </div>
+      </div>
+
+      <div class="card" id="emailSection">
+        <h2>依頼メール文面</h2>
+        <div id="emailContainer"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Rate tables -->
+  <div class="card">
+    <div class="rate-table-toggle">
+      <button onclick="toggleRateTables()">料金表を表示 / 非表示</button>
+    </div>
+    <div class="rate-tables" id="rateTables">
+      <table>
+        <caption>① 五十嵐さん</caption>
+        <tr><th>時間帯</th><th>料金/h</th></tr>
+        <tr><td>9:00〜18:00</td><td>¥3,500</td></tr>
+        <tr><td>18:00〜22:00</td><td>¥3,850</td></tr>
+        <tr><td>22:00〜</td><td>¥4,375</td></tr>
+        <tr><td colspan="2" style="color:#c62828; font-size:0.9em;">土日祝+¥3,000/日 ｜ 交通費¥1,200 ｜ 最低2h</td></tr>
+      </table>
+      <table>
+        <caption>② すずさん（SNS割引後）</caption>
+        <tr><th>時間帯</th><th>1名</th><th>2名</th><th>3名</th></tr>
+        <tr><td>9:00〜18:00</td><td>¥2,500</td><td>¥3,500</td><td>¥4,500</td></tr>
+        <tr><td>18:00〜21:00</td><td>¥3,000</td><td>¥4,000</td><td>¥5,000</td></tr>
+        <tr><td>21:00〜23:00</td><td>¥3,500</td><td>¥4,500</td><td>¥5,500</td></tr>
+        <tr><td>23:00〜6:00</td><td>¥4,000</td><td>¥5,000</td><td>¥6,000</td></tr>
+        <tr><td>6:00〜9:00</td><td>¥3,500</td><td>¥4,500</td><td>¥5,500</td></tr>
+        <tr><td colspan="4" style="color:#c62828; font-size:0.9em;">土日祝+¥500/h ｜ 交通費¥1,000 ｜ 最低3h</td></tr>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============================
+// Holidays & Utilities
+// ============================
+const HOLIDAYS = new Set([
+  '2025-01-01','2025-01-13','2025-02-11','2025-02-23','2025-02-24',
+  '2025-03-20','2025-04-29','2025-05-03','2025-05-04','2025-05-05','2025-05-06',
+  '2025-07-21','2025-08-11','2025-09-15','2025-09-23',
+  '2025-10-13','2025-11-03','2025-11-23','2025-11-24',
+  '2026-01-01','2026-01-12','2026-02-11','2026-02-23',
+  '2026-03-20','2026-04-29','2026-05-03','2026-05-04','2026-05-05','2026-05-06',
+  '2026-07-20','2026-08-11','2026-09-21','2026-09-22','2026-09-23',
+  '2026-10-12','2026-11-03','2026-11-23',
+  '2027-01-01','2027-01-11','2027-02-11','2027-02-23',
+  '2027-03-21','2027-04-29','2027-05-03','2027-05-04','2027-05-05',
+  '2027-07-19','2027-08-11','2027-09-20','2027-09-23',
+  '2027-10-11','2027-11-03','2027-11-23',
+]);
+const DOW = ['日','月','火','水','木','金','土'];
+
+function getDayType(ds) {
+  if (HOLIDAYS.has(ds)) return 'holiday';
+  const dow = new Date(ds+'T00:00:00').getDay();
+  return (dow===0||dow===6) ? 'weekend' : 'weekday';
+}
+function dateDow(ds) { return DOW[new Date(ds+'T00:00:00').getDay()]; }
+function fmtDateDow(ds) {
+  const d=new Date(ds+'T00:00:00');
+  return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}（${DOW[d.getDay()]}）`;
+}
+function fmtShort(ds) { const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}/${d.getDate()}（${DOW[d.getDay()]}）`; }
+function fmtEmail(ds) { const d=new Date(ds+'T00:00:00'); return `${d.getMonth()+1}月${d.getDate()}日(${DOW[d.getDay()]})`; }
+function minToTime(m) {
+  const h=Math.floor(m/60), mm=m%60, dh=h>=24?h-24:h;
+  return String(dh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+function timeLabel(m) {
+  const h=Math.floor(m/60), mm=m%60, dh=h>=24?h-24:h;
+  return (h>=24?'翌':'')+String(dh).padStart(2,'0')+':'+String(mm).padStart(2,'0');
+}
+function showToast(msg) {
+  const t=document.getElementById('toast'); t.textContent=msg;
+  t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),1800);
+}
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active',(name==='single'&&i===0)||(name==='multi'&&i===1));
+  });
+  document.getElementById('tab-single').classList.toggle('active',name==='single');
+  document.getElementById('tab-multi').classList.toggle('active',name==='multi');
+}
+function buildTimeOpts(sel, from, to, def) {
+  sel.innerHTML='';
+  for(let m=from;m<=to;m+=15) sel.add(new Option(timeLabel(m),m));
+  if(def!==undefined) sel.value=def;
+}
+function toggleRateTables() { document.getElementById('rateTables').classList.toggle('show'); }
+
+// ============================
+// Calculation Engines
+// ============================
+function igRate(m) { const h=m/60; if(h>=9&&h<18)return 3500; if(h>=18&&h<22)return 3850; return 4375; }
+
+function calcIg(s, e, hol, sick) {
+  const tot=e-s;
+  const minReq=120; // 2h
+  const isUnder = tot < minReq;
+  const calcEnd = isUnder ? s + minReq : e;
+  const calcTot = calcEnd - s;
+  let cost=0, bk={};
+  for(let m=s;m<calcEnd;m+=15){ const r=igRate(m%1440); cost+=r/4; const k='¥'+r.toLocaleString(); bk[k]=(bk[k]||0)+15; }
+  let det=[];
+  if(isUnder) det.push('⚠ 最低2h分で計算');
+  for(const[r,mins]of Object.entries(bk)){ const h=Math.floor(mins/60),m=mins%60; det.push(`${r}/h × ${h>0?h+'時間':''}${m>0?m+'分':''}`); }
+  let sf=0;
+  if(sick){ sf=1000*(calcTot/60); det.push(`病児保育: +¥${sf.toLocaleString()}`); }
+  let wf=0;
+  if(hol){ wf=3000; det.push('土日祝: +¥3,000'); }
+  det.push('交通費: ¥1,200');
+  return { total: cost+wf+1200+sf, details: det, isMinApplied: isUnder };
+}
+
+function szBase(c){ return {1:2500,2:3500,3:4500}[c]||2500; }
+function szSur(m){ const h=m/60; if(h>=9&&h<18)return 0; if(h>=18&&h<21)return 500; if(h>=21&&h<23)return 1000; if(h>=23||h<6)return 1500; if(h>=6&&h<9)return 1000; return 0; }
+
+function calcSz(s, e, hol, cc) {
+  const tot=e-s;
+  const minReq=180; // 3h
+  const isUnder = tot < minReq;
+  const calcEnd = isUnder ? s + minReq : e;
+  const base=szBase(cc); let cost=0, bk={};
+  for(let m=s;m<calcEnd;m+=15){ const r=base+szSur(m%1440)+(hol?500:0); cost+=r/4; bk[r]=(bk[r]||0)+15; }
+  let det=[];
+  if(isUnder) det.push('⚠ 最低3h分で計算');
+  for(const[r,mins]of Object.entries(bk).sort((a,b)=>a[0]-b[0])){ const h=Math.floor(mins/60),m=mins%60; det.push(`¥${Number(r).toLocaleString()}/h × ${h>0?h+'時間':''}${m>0?m+'分':''}`); }
+  if(hol) det.push('（土日祝+¥500/h込み）');
+  det.push('交通費: ¥1,000');
+  return { total: cost+1000, details: det, isMinApplied: isUnder };
+}
+
+// ============================
+// TAB 1: Single Day
+// ============================
+function initSingle() {
+  buildTimeOpts(document.getElementById('startTime'), 6*60, 28*60+45, 18*60);
+  buildTimeOpts(document.getElementById('endTime'), 6*60+15, 30*60, 22*60);
+  updateDuration();
+  const today=new Date(), y=today.getFullYear(), m=String(today.getMonth()+1).padStart(2,'0'), d=String(today.getDate()).padStart(2,'0');
+  document.getElementById('dateInput').value=`${y}-${m}-${d}`;
+  updateDayBadge();
+  document.getElementById('startTime').addEventListener('change', updateDuration);
+  document.getElementById('endTime').addEventListener('change', updateDuration);
+  document.getElementById('dateInput').addEventListener('change', updateDayBadge);
+}
+
+function updateDuration() {
+  const diff=parseInt(document.getElementById('endTime').value)-parseInt(document.getElementById('startTime').value);
+  const el=document.getElementById('durationDisplay');
+  if(diff<=0){el.value='---';return;}
+  const h=Math.floor(diff/60),m=diff%60;
+  el.value=(h>0?h+'h':'')+(m>0?m+'m':'');
+}
+
+function updateDayBadge() {
+  const ds=document.getElementById('dateInput').value;
+  const badge=document.getElementById('dayTypeBadge'), disp=document.getElementById('dateDisplayInput');
+  if(!ds){badge.innerHTML='';disp.value='';return;}
+  const t=getDayType(ds);
+  const lb={weekday:['平日','badge-weekday'],weekend:['土日','badge-weekend'],holiday:['祝日','badge-holiday']}[t];
+  badge.innerHTML=`<span class="day-type-badge ${lb[1]}">${lb[0]}</span>`;
+  disp.value=fmtDateDow(ds);
+}
+
+function calculate() {
+  const ds=document.getElementById('dateInput').value;
+  const s=parseInt(document.getElementById('startTime').value), e=parseInt(document.getElementById('endTime').value);
+  const cc=parseInt(document.getElementById('childCount').value), sick=document.getElementById('sickChild').checked;
+  if(!ds){showSErr('利用日を選択してください。');return;}
+  if(e<=s){showSErr('終了時間は開始時間より後にしてください。');return;}
+  document.getElementById('errorMsg').classList.remove('show');
+  const hol=getDayType(ds)!=='weekday', tot=e-s;
+  const ig=calcIg(s,e,hol,sick), sz=calcSz(s,e,hol,cc);
+  const sn=sick?'<br><span style="color:#c62828;">※ 病児保育は対応不可</span>':'';
+  const res=document.getElementById('results'); res.classList.add('show');
+  const c1=document.getElementById('resultCard1'),c2=document.getElementById('resultCard2');
+  c1.classList.remove('winner');c2.classList.remove('winner');
+  document.getElementById('price1').textContent='¥'+Math.round(ig.total).toLocaleString();
+  document.getElementById('breakdown1').innerHTML=ig.details.join('<br>');
+  document.getElementById('price2').textContent='¥'+Math.round(sz.total).toLocaleString();
+  document.getElementById('breakdown2').innerHTML=sz.details.join('<br>')+sn;
+  const sav=document.getElementById('savingMsg');
+  const df=Math.abs(Math.round(ig.total)-Math.round(sz.total));
+  if(ig.total<sz.total){c1.classList.add('winner');sav.innerHTML=`<div class="saving-msg">① 五十嵐さんが ¥${df.toLocaleString()} おトク！</div>`;}
+  else if(sz.total<ig.total){c2.classList.add('winner');sav.innerHTML=`<div class="saving-msg">② すずさんが ¥${df.toLocaleString()} おトク！</div>`;}
+  else sav.innerHTML=`<div class="same-msg">両者同額</div>`;
+  res.scrollIntoView({behavior:'smooth',block:'start'});
+}
+function showSErr(msg){const el=document.getElementById('errorMsg');el.textContent=msg;el.classList.add('show');document.getElementById('results').classList.remove('show');}
+
+// ============================
+// TAB 2: Multi Day
+// ============================
+let eid=0;
+
+function addEntry() {
+  eid++;
+  const list=document.getElementById('entryList');
+  const div=document.createElement('div');
+  div.className='entry-item'; div.id='entry-'+eid; div.dataset.eid=eid;
+  // Default date: next month 1st
+  const nm=new Date(new Date().getFullYear(), new Date().getMonth()+1, 1);
+  const defDate=`${nm.getFullYear()}-${String(nm.getMonth()+1).padStart(2,'0')}-01`;
+
+  div.innerHTML=`
+    <div class="entry-header">
+      <span class="entry-num">#${eid}</span>
+      <button class="btn-remove" onclick="removeEntry(${eid})">✕</button>
+    </div>
+    <div class="form-row" style="margin-bottom:6px;">
+      <div class="form-group" style="flex:2;">
+        <label>日付</label>
+        <input type="text" class="entry-date-display" readonly style="cursor:pointer;" onclick="this.nextElementSibling.showPicker()">
+        <input type="date" class="entry-date" value="${defDate}" style="position:absolute; visibility:hidden; pointer-events:none;">
+      </div>
+      <div class="form-group" style="max-width:80px;">
+        <label>人数</label>
+        <select class="entry-children">
+          <option value="1">1人</option>
+          <option value="2" selected>2人</option>
+          <option value="3">3人</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row" style="margin-bottom:0;">
+      <div class="form-group">
+        <label>開始</label>
+        <select class="entry-start"></select>
+      </div>
+      <div class="form-group">
+        <label>終了</label>
+        <select class="entry-end"></select>
+      </div>
+    </div>
+  `;
+  list.appendChild(div);
+
+  // Setup time selects
+  buildTimeOpts(div.querySelector('.entry-start'), 6*60, 28*60+45, 18*60);
+  buildTimeOpts(div.querySelector('.entry-end'), 6*60+15, 30*60, 22*60);
+
+  // Setup date display sync
+  const dateHidden=div.querySelector('.entry-date');
+  const dateDisp=div.querySelector('.entry-date-display');
+  dateHidden.addEventListener('change', function(){ dateDisp.value=this.value?fmtDateDow(this.value):''; });
+  if(defDate) dateDisp.value=fmtDateDow(defDate);
+
+  updateEntryCount();
+  div.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function removeEntry(id) { const el=document.getElementById('entry-'+id); if(el)el.remove(); updateEntryCount(); }
+function updateEntryCount() {
+  const n=document.querySelectorAll('.entry-item').length;
+  document.getElementById('entryCount').textContent=n>0?`（${n}件）`:'';
+}
+
+function calcMulti() {
+  const entries=document.querySelectorAll('.entry-item');
+  if(!entries.length){showToast('日程を追加してください');return;}
+  // month is no longer a separate input
+
+  let rows=[];
+  entries.forEach(en=>{
+    const ds=en.querySelector('.entry-date').value;
+    const s=parseInt(en.querySelector('.entry-start').value);
+    const e=parseInt(en.querySelector('.entry-end').value);
+    const cc=parseInt(en.querySelector('.entry-children').value);
+    if(!ds||e<=s) return;
+    const hol=getDayType(ds)!=='weekday';
+    const ig=calcIg(s,e,hol,false);
+    const sz=calcSz(s,e,hol,cc);
+    let winner='same';
+    if(ig.total<sz.total) winner='ig';
+    else if(sz.total<ig.total) winner='sz';
+    rows.push({ds,s,e,cc,ig,sz,winner});
+  });
+
+  if(!rows.length){showToast('有効な日程がありません');return;}
+  rows.sort((a,b)=>a.ds.localeCompare(b.ds)||a.s-b.s);
+
+  // Build table
+  let igTotal=0, szTotal=0;
+  let html='<tr><th>日付</th><th>時間</th><th>①五十嵐</th><th>②すず</th></tr>';
+  rows.forEach(r=>{
+    const igP=Math.round(r.ig.total), szP=Math.round(r.sz.total);
+    igTotal+=igP; szTotal+=szP;
+    const igWin = r.winner==='ig'||r.winner==='same';
+    const szWin = r.winner==='sz'||r.winner==='same';
+    const igNote = r.ig.isMinApplied ? '<br><span style="font-size:0.7em;color:#e65100;">※最低2h</span>' : '';
+    const szNote = r.sz.isMinApplied ? '<br><span style="font-size:0.7em;color:#e65100;">※最低3h</span>' : '';
+    html+=`<tr>
+      <td class="date-col">${fmtShort(r.ds)}</td>
+      <td>${minToTime(r.s)}~${minToTime(r.e)}</td>
+      <td class="${igWin?'cheaper':''}">¥${igP.toLocaleString()}${igNote}</td>
+      <td class="${szWin?'cheaper':''}">¥${szP.toLocaleString()}${szNote}</td>
+    </tr>`;
+  });
+
+  const igTotalWin = igTotal<=szTotal;
+  const szTotalWin = szTotal<=igTotal;
+  html+=`<tr class="total-row">
+    <td colspan="2" style="text-align:right;">合計</td>
+    <td class="${igTotalWin?'cheaper':''}">¥${igTotal.toLocaleString()}</td>
+    <td class="${szTotalWin?'cheaper':''}">¥${szTotal.toLocaleString()}</td>
+  </tr>`;
+  document.getElementById('multiTable').innerHTML=html;
+
+  // Build emails - only include dates assigned to each sitter
+  // Same price → assign to Igarashi (or could be either)
+  const igDates=rows.filter(r=>r.winner==='ig'||r.winner==='same');
+  const szDates=rows.filter(r=>r.winner==='sz');
+
+  const month=rows.length>0 ? new Date(rows[0].ds+'T00:00:00').getMonth()+1 : '○';
+  const container=document.getElementById('emailContainer');
+  container.innerHTML='';
+
+  function makeEmailBlock(name, id, dates) {
+    if(!dates.length) return;
+    const lines=dates.map(r=>{
+      const note = r.cc===1 ? ' ※子供1名のみ' : '';
+      return `${fmtEmail(r.ds)} ${minToTime(r.s)} ～ ${minToTime(r.e)}${note}`;
+    }).join('\n');
+    const body=`${name}さん、\n\nお世話になっております。\n来月${month}月にお願いしたい日付・時間は以下のとおりです。\n\n${lines}\n\nご検討いただけますと幸いです。\n宜しくお願い申し上げます。\n\n松田郁世`;
+    const block=document.createElement('div');
+    block.className='email-block';
+    block.innerHTML=`
+      <div class="email-header">
+        <span>${name}さん宛（${dates.length}件）</span>
+        <button class="btn-copy" onclick="copyEmail(this)">コピー</button>
+      </div>
+      <div class="email-body">${escHtml(body)}</div>`;
+    container.appendChild(block);
+  }
+
+  makeEmailBlock('五十嵐', 'email1', igDates);
+  makeEmailBlock('すず', 'email2', szDates);
+
+  if(!igDates.length&&!szDates.length) {
+    container.innerHTML='<div class="email-none">利用可能な日程がありません</div>';
+  }
+  if(igDates.length===0&&szDates.length>0) {
+    // No dates for Igarashi
+  }
+  if(szDates.length===0&&igDates.length>0) {
+    // No dates for Suzu - that's fine, just don't show her email
+  }
+
+  document.getElementById('multiResults').style.display='block';
+  document.getElementById('multiResults').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+function escHtml(s) { return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+function copyEmail(btn) {
+  const body=btn.closest('.email-block').querySelector('.email-body');
+  const text=body.textContent;
+  navigator.clipboard.writeText(text).then(()=>{
+    btn.textContent='コピー済み'; btn.classList.add('copied'); showToast('コピーしました');
+    setTimeout(()=>{btn.textContent='コピー';btn.classList.remove('copied');},2000);
+  }).catch(()=>{
+    const range=document.createRange(); range.selectNodeContents(body);
+    const sel=window.getSelection(); sel.removeAllRanges(); sel.addRange(range);
+    document.execCommand('copy'); sel.removeAllRanges();
+    btn.textContent='コピー済み'; btn.classList.add('copied'); showToast('コピーしました');
+    setTimeout(()=>{btn.textContent='コピー';btn.classList.remove('copied');},2000);
+  });
+}
+
+// ============================
+// Init
+// ============================
+document.addEventListener('DOMContentLoaded', ()=>{
+  initSingle();
+  addEntry(); addEntry(); addEntry();
+});
+</script>
+</body>
+</html>
